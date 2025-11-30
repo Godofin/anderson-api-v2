@@ -38,12 +38,20 @@ def execute_query(query: str, params: tuple = None, fetch: str = "all"):
     try:
         conn = get_connection()
         
+        # Converte placeholders %s para :1, :2, :3, etc (formato pg8000)
         if params:
-            result = conn.run(query, params)
+            converted_query = query
+            for i in range(len(params)):
+                converted_query = converted_query.replace('%s', f':{i+1}', 1)
+            
+            # pg8000 espera parâmetros como lista, não tupla
+            result = conn.run(converted_query, list(params))
         else:
             result = conn.run(query)
         
         if fetch == "all":
+            if not result:
+                return []
             columns = [desc[0] for desc in conn.columns]
             return [dict(zip(columns, row)) for row in result]
         elif fetch == "one":
@@ -56,6 +64,8 @@ def execute_query(query: str, params: tuple = None, fetch: str = "all"):
             
     except Exception as e:
         print(f"❌ Erro na query: {e}")
+        print(f"Query: {query}")
+        print(f"Params: {params}")
         raise e
     finally:
         if conn:
