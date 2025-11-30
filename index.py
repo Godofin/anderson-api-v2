@@ -4,27 +4,9 @@ FastAPI Application - Anderson Viagem e Turismo
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 import time
 
 from routes import router as event_router
-from database import Database
-
-# ============================================
-# LIFECYCLE
-# ============================================
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Gerencia inicialização e encerramento"""
-    # Startup
-    print("🚀 Iniciando aplicação...")
-    Database.initialize()
-    yield
-    # Shutdown
-    print("🛑 Encerrando aplicação...")
-    Database.close_all()
-
 
 # ============================================
 # APLICAÇÃO PRINCIPAL
@@ -35,8 +17,7 @@ app = FastAPI(
     description="API para gerenciamento de eventos e excursões",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc",
-    lifespan=lifespan
+    redoc_url="/redoc"
 )
 
 # ============================================
@@ -51,7 +32,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     """Log de requisições"""
@@ -61,7 +41,6 @@ async def log_requests(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     print(f"📊 {request.method} {request.url.path} - {response.status_code} - {process_time:.4f}s")
     return response
-
 
 # ============================================
 # EXCEPTION HANDLERS
@@ -79,13 +58,11 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
-
 # ============================================
 # ROTAS
 # ============================================
 
 app.include_router(event_router, prefix="/api/v1", tags=["API v1"])
-
 
 # ============================================
 # ENDPOINTS DE STATUS
@@ -102,18 +79,15 @@ async def root():
         "docs": "/docs"
     }
 
-
 @app.get("/health", tags=["Status"])
 async def health_check():
     """Health check (GET)"""
     return {"status": "healthy", "timestamp": time.time()}
 
-
 @app.head("/health", tags=["Status"])
 async def health_check_head():
     """Health check (HEAD)"""
     return Response(status_code=200)
-
 
 @app.get("/api/v1/ping", tags=["Status"])
 async def ping():
@@ -133,7 +107,6 @@ async def ping():
                 "error": str(e)
             }
         )
-
 
 # Handler para Vercel
 handler = app
